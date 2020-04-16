@@ -19,6 +19,10 @@ class ZFS:
     def __init__(self):
         self._zfs_handle = self.__zfs_init()
 
+    def __dealloc__(self):
+        if self.__zfs_handle is not None:
+            libzfs.libzfs_fini(self.__zfs_handle)
+
     def __zfs_init(self) -> ctypes.c_void_p:
         libzfs_init = libzfs.libzfs_init
         libzfs_init.restype = ctypes.c_void_p
@@ -44,11 +48,13 @@ class ZFS:
         zfs_is_mounted = libzfs.zfs_is_mounted
         zfs_is_mounted.restype = ctypes.c_bool
 
+        dataset_handle = self.__zfs_open(dataset_name)
         res = ctypes.c_char_p()
         ret = zfs_is_mounted(
-            self.__zfs_open(dataset_name),
+            dataset_handle,
             ctypes.POINTER(type(res))(res)
         )
+        libzfs.zfs_close(dataset_handle)
 
         return res.value if (ret is True) else None
 
